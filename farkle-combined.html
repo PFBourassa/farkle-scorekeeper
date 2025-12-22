@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farkle Score Keeper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        #navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #F9F9F9;
+            border-bottom: 2px solid #CCC;
+            z-index: 100;
+        }
+
+        #navbar ul {
+            list-style: none;
+            margin: 0;
+            padding: 0.5em;
+            display: flex;
+            align-items: center;
+        }
+
+        #navbar li {
+            margin-right: 20px;
+        }
+
+        #reset {
+            color: #0066cc;
+            cursor: pointer;
+        }
+
+        #reset:hover {
+            text-decoration: underline;
+        }
+
+        #container {
+            width: 1200px;
+            padding: 30px;
+            margin: 60px auto 0;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+
+        #scoreboard {
+            border: 1px solid #ccc;
+        }
+
+        #tally {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #tallyDisp {
+            border: 1px solid black;
+        }
+
+        #field {
+            font-size: 24px;
+            padding: 10px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .status {
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .instructions {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+        #toggleScoring:hover {
+            text-decoration: underline;
+        }
+        #scoringPanel {
+            display: none;
+            width: 260px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: #fafafa;
+            font-size: 14px;
+        }
+        #scoringPanel h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+        #scoringPanel table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #scoringPanel th,
+        #scoringPanel td {
+            border-bottom: 1px solid #ddd;
+            padding: 4px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar">
+        <ul>
+            <li><h1 style="margin: 0;">FARKLE!</h1></li>
+            <li id="reset">Reset Game</li>
+            <li id="toggleScoring" style="color:#0066cc; cursor:pointer;">Scoring</li>
+        </ul>
+    </div>
+
+    <div id="container">
+        <canvas id="scoreboard" width="800" height="600">
+            Your browser doesn't support canvas. Please use a modern browser.
+        </canvas>
+        
+        <div id="tally">
+            <p class="status"><span id="change">It is Player 1's turn.</span></p>
+            <canvas id="tallyDisp" width="300" height="200">
+                Your browser doesn't support canvas.
+            </canvas>
+            <form onsubmit="return false;" id="form">
+                <input type="text" id="field" name="field" placeholder="Enter score or name"/>
+            </form>
+            <div class="instructions">
+                <p>- Enter dice combination or score value</p>
+                <p>- Enter '.' for Farkle</p>
+                <p>- Press Enter with empty field to bank points</p>
+                <p>- Enter text to change player name</p>
+            </div>
+            <div id="scoringPanel">
+                <h3>Scoring Reference</h3>
+                <table>
+                    <tr><th>Roll</th><th>Points</th></tr>
+                    <tr><td>Straight (1–6)</td><td>1500</td></tr>
+                    <tr><td>Three Pairs</td><td>1500</td></tr>
+                    <tr><td>Two Triples</td><td>2500</td></tr>
+                    <tr><td>Four of a Kind</td><td>1000</td></tr>
+                    <tr><td>Five of a Kind</td><td>2000</td></tr>
+                    <tr><td>Six of a Kind</td><td>3000</td></tr>
+                    <tr><td>Three 1s</td><td>300</td></tr>
+                    <tr><td>Three of a Kind</td><td>100 × face value</td></tr>
+                    <tr><td>Single 1</td><td>100</td></tr>
+                    <tr><td>Single 5</td><td>50</td></tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    var numberOfPlayers = 6;
+    var tally = 0;
+    var gameWon = 0; //used as bool and number
+    var screenWidth = 800;
+    var screenHeight = 570;
+    var winner = "winner";
+    var finale = 0;
+    var scores = [];
+    var names = [];
+    var turn = 1;
+
+    function score(dice) {
+        var values = { //sorting
+            1: 0,
+            2: 0,
+            3: 0,
+            4: 0,
+            5: 0,
+            6: 0
+        };
+        for (var i = 0; i <= dice.length; i++) {
+            for (d = 1; d <= 6; d++) {
+                if (dice[i] == d) {
+                    values[d] += 1;
+                }
+            }
+        }
+        var total = 0; //scoring
+        if (count(values, 6)) {
+            return 3000;
+        }
+        if (count(values, 5)) {
+            return 2000;
+        }
+        if (count(values, 4)) {
+            return 1000;
+        }
+        if (count(values, 2) == 3) { //three pairs
+            return 1500;
+        }
+        if (count(values, 3) == 2) { //triples
+            return 2500;
+        }
+        for (d = 1; d <= 6; d++) { //three of a kind
+            if (values[d] == 3) {
+                return 100 * d;
+            }
+        }
+
+        if (count(values, 1) == 6) { //straight
+            return 1500;
+        }
+
+        else {
+            return 50 * values[5] + 100 * values[1];
+        }
+    }
+
+    function count(array, n) {
+        var result = 0;
+        for (d = 1; d <= 6; d++) {
+            if (array[d] == n) {
+                result += 1;
+            }
+        }
+        return result;
+    }
+
+    function change() {
+        if (gameWon !== 0) {
+            document.getElementById('change').innerHTML = ("You need " + parseInt(gameWon - scores[turn - 1] - tally, 10) + " points to win");
+        }
+        else {
+            document.getElementById('change').innerHTML = ("It is " + names[turn] + "'s turn.");
+        }
+    }
+
+    function addScore() {
+        if (scores[turn - 1] >= 750 || tally >= 750) {
+            scores[turn - 1] = parseInt(scores[turn - 1], 10) + tally;
+        }
+
+        if ((scores[turn - 1] > gameWon) && (gameWon !== 0) && finale !== turn) {
+            alert(names[turn] + " has taken the lead with " + scores[turn - 1]);
+            winner = names[turn];
+            gameWon = scores[turn - 1];
+        }
+        if (scores[turn - 1] >= 10000 && gameWon === 0) {
+            alert(names[turn] + " has won with a score of " + scores[turn - 1]);
+            winner = names[turn];
+            finale = turn;
+            gameWon = scores[turn - 1];
+        }
+        if (turn == numberOfPlayers) {
+            turn = 1;
+            tally = 0;
+        }
+        else {
+            turn += 1;
+            tally = 0;
+        }
+        if (finale === turn) {
+            alert(names[turn] + " is the winner!!");
+        }
+    }
+
+    function restart() {
+        numberOfPlayers = parseInt(prompt("How many players?"), 10);
+        setup();
+    }
+
+    function setup() {
+        document.getElementById("reset").onclick = restart;
+
+        if (numberOfPlayers >= 8) {
+            padding = 2;
+            barWidth = (screenWidth - padding * (numberOfPlayers + 1)) / numberOfPlayers;
+        }
+        else {
+            padding = 40;
+            barWidth = (screenWidth - padding * (numberOfPlayers + 1)) / numberOfPlayers;
+        }
+        scores = [];
+        for (i = 0; i <= numberOfPlayers; i++) {
+            scores.push("0");
+        }
+        names = [];
+        for (i = 0; i <= numberOfPlayers; i++) {
+            if (numberOfPlayers >= 8) {
+                names.push("P" + i);
+            }
+            else {
+                names.push("Player" + i);
+            }
+        }
+        turn = 1;
+        gameWon = 0;
+    }
+
+    window.doSubmit = function() {
+        var input = document.getElementById('field').value;
+        if (input === '') {
+            addScore();
+            return false;
+        }
+        if (input == '.') { //farkle
+            tally = 0;
+            addScore();
+            document.getElementById('field').value = '';
+            return false;
+        }
+        if (input % 50 === 0) {
+            tally = parseInt(tally, 10) + parseInt(input, 10);
+            document.getElementById('field').value = '';
+            return false;
+        }
+        if (score(input) != 0) {
+            tally += score(input);
+            document.getElementById('field').value = '';
+            return false;
+        }
+        else {
+            names[turn] = input;
+            document.getElementById('field').value = '';
+        }
+    };
+
+    function draw() {
+        var elemt = document.getElementById('tallyDisp');
+        if (elemt && elemt.getContext) {
+            var contextt = elemt.getContext('2d');
+            if (contextt) {
+                if (scores[turn - 1] < 750 && tally < 750) {
+                    contextt.fillStyle = '#d33'; //not broken out
+                }
+                else {
+                    contextt.fillStyle = "#9f9";
+                }
+                contextt.fillRect(0, 0, 300, 200);
+
+                contextt.fillStyle = '#009';
+                contextt.font = 'bold 100px sans-serif';
+                contextt.textAlign = 'center';
+                contextt.textBaseline = 'middle';
+                contextt.fillText(tally, 150, 100);
+            }
+        }
+        var elem = document.getElementById('scoreboard');
+        if (elem && elem.getContext) {
+            var context = elem.getContext('2d');
+            if (context) {
+                if (gameWon == 0) { //no winner
+                    context.fillStyle = "#fff";
+                    context.fillRect(0, 0, 800, 600);
+                    context.fillStyle = "#6D8ED4"; //background
+                    context.fillRect(0, 0, screenWidth, screenHeight);
+                    context.font = 'bold 25px sans-serif';
+                    context.textAlign = 'center'; //bars
+                    for (var i = 1; i < scores.length; i++) {
+                        if (i == turn) {
+                            context.fillStyle = "#9f0";
+                        }
+                        else {
+                            context.fillStyle = "#1A23BD";
+                        }
+                        context.fillRect(i * padding + (i - 1) * barWidth, screenHeight - (scores[i - 1]) * screenHeight / 10000, barWidth, scores[i - 1] * screenHeight / 10000);
+                        context.fillStyle = "#fff";
+                        context.fillText(scores[i - 1], i * padding + ((i - 1) + 0.5) * barWidth, screenHeight - (scores[i - 1]) * screenHeight / 10000 + 25);
+                        context.fillStyle = "#000"; //names
+                        context.fillText(names[i], i * padding + ((i - 1) + 0.5) * barWidth, screenHeight + 20);
+                    }
+                }
+                else {
+                    var width = 550;
+                    var graph = 480;
+                    var marginX = (800 - width) * 0.5;
+                    var marginY = 100;
+
+                    var togo = parseInt(gameWon - scores[turn - 1] - tally, 10);
+                    var difference = gameWon - scores[turn - 1];
+                    var bar = ((tally) * graph) / difference;
+                    context.font = 'bold 25px sans-serif';
+                    context.fillStyle = "#ccc"; //gray
+                    context.fillRect(0, 0, 800, 600);
+                    context.fillStyle = "#6D8ED4"; //backround
+                    context.fillRect(marginX, marginY, width, graph);
+                    context.fillStyle = "000"; //text
+                    context.textAlign = 'center';
+                    context.textBaseline = 'middle';
+                    context.fillText("Final Round!", 400, marginY * 0.5);
+                    context.fillText(gameWon, marginX * 1.5 + width, marginY);
+                    context.fillText(scores[turn - 1], marginX * 1.5 + width, marginY + graph);
+                    context.fillText(winner, marginX * 0.5, marginY);
+                    context.fillText(names[turn], marginX * 0.5, marginY + graph);
+                    context.fillStyle = "#1A23BD";
+                    if (tally <= difference) {
+                        context.fillRect(marginX, marginY + graph - bar, width, bar);
+                    }
+                    else {
+                        context.fillRect(marginX, marginY, width, graph);
+                    }
+                    context.fillStyle = "000";
+                    context.font = 'bold 200px sans-serif'; //Big font
+                    context.fillText(togo, 400, marginY + graph * 0.5);
+                }
+            }
+        }
+    }
+
+    // Initialize the game when the page loads
+    window.onload = setup;
+    setInterval(draw, 60);
+    setInterval(change, 60);
+
+    // Add form submission handler
+    document.getElementById('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        doSubmit();
+    });
+
+    document.getElementById('toggleScoring').onclick = function () {
+    var panel = document.getElementById('scoringPanel');
+    panel.style.display = (panel.style.display === 'none' || panel.style.display === '')
+        ? 'block'
+        : 'none';
+    };
+
+    </script>
+</body>
+</html>

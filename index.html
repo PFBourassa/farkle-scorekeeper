@@ -131,7 +131,15 @@
                 Your browser doesn't support canvas.
             </canvas>
             <form onsubmit="return false;" id="form">
-                <input type="text" id="field" name="field" placeholder="Enter score or name"/>
+                <input
+                  type="number"
+                  id="field"
+                  name="field"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Enter score or name"
+                />
+
             </form>
             <div class="instructions">
                 <p>- Enter dice combination or score value</p>
